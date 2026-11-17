@@ -1,0 +1,18 @@
+.section .text
+.balign 4
+.globl Lab02_3b
+.type Lab02_3b, %function
+
+Lab02_3b:
+    ADR   X0, msg1
+    LDURB W1, [X0, 3]
+    ADD   W1, W1, 0x20
+    STURB W1, [X0, 3]
+nomodify:
+    BR    X30
+.size Lab02_3b, .-Lab02_3b
+
+.section .data
+msg1: .asciz "THIS IS A LOUD STATEMENT!"
+
+.section .note.GNU-stack,"",%progbits

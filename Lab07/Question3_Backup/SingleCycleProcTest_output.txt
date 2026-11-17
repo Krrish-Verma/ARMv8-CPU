@@ -1,0 +1,15 @@
+VCD info: dumpfile singlecycle.vcd opened for output.
+Starting original Program 1...
+PASS:                  Program 1 loaded result = 0x000000000000000f
+PASS:                Program 1 loop iterations = 0x000000000000000f
+PASS:                       Program 1 final PC = 0x0000000000000030
+Program 1 cycles executed: 69
+Starting MOVZ/MOVK Program 2...
+PASS:        Program 2 value constructed in X9 = 0x123456789abcdef0
+PASS:   Program 2 value stored at address 0x28 = 0x123456789abcdef0
+PASS:          Program 2 value loaded into X10 = 0x123456789abcdef0
+PASS:                       Program 2 final PC = 0x0000000000000118
+Program 2 cycles executed: 6
+=== SingleCycleProc Test Summary ===
+ALL PROCESSOR TESTS PASSED: 7 of 7
+SingleCycleProcTest.v:155: $finish called at 9361000 (1ps)

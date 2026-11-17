@@ -1,0 +1,9 @@
+* text=auto
+*.v text eol=lf
+*.S text eol=lf
+*.c text eol=lf
+*.md text eol=lf
+*.tcl text eol=lf
+*.vcd text eol=lf
+*.out binary
+*.xz binary
