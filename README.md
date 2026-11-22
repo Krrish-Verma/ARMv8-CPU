@@ -22,7 +22,7 @@ python -m verification.run
 Run `python -m verification.run legacy` for the Icarus Verilog benches or `python -m verification.run cocotb --seed 0x350 --waves` for the Verilator tests with waveform tracing. The default seed is `0x350`. The runner saves the legacy demo trace to `build/icarus/singlecycle.vcd` and the optional Verilator CPU trace to `build/verilator/cpu/dump.vcd`. Each cocotb suite also writes a `results.xml` file in its build directory.
 
 ```sh
-gtkwave build/icarus/singlecycle.vcd -S Lab07/SingleCycleProcTest.gtkw.tcl
+gtkwave build/icarus/singlecycle.vcd -S single-cycle-cpu/SingleCycleProcTest.gtkw.tcl
 ```
 
 ## What the tests verify
@@ -97,9 +97,20 @@ f84003e3
 
 | Path | Contents |
 | --- | --- |
-| [`Lab07/SingleCycleProc.v`](Lab07/SingleCycleProc.v) | CPU top level and datapath integration |
-| [`Lab07/`](Lab07/) | Opcode decoder, instruction ROM, data RAM, and demo bench |
-| [`Lab05/`](Lab05/) and [`Lab06/`](Lab06/) | Register file, ALU, immediate extension, next-PC logic, and component benches |
+| [`single-cycle-cpu/`](single-cycle-cpu/) | [CPU top level](single-cycle-cpu/SingleCycleProc.v), opcode decoder, instruction ROM, data RAM, and demo bench |
+| [`register-file-and-logic/`](register-file-and-logic/) | Register file, gates, 8-bit multiplexer, and component benches |
+| [`alu-immediates-and-next-pc/`](alu-immediates-and-next-pc/) | 64-bit ALU, immediate extension, branch target selection, and component benches |
 | [`verification/`](verification/) | Simulation runner, test-program generator, Python reference model, and cocotb tests |
 
-The repository includes supporting coursework from Texas A&M's ECEN 350 Computer Organization labs. The assembly, cache, and compiler exercises are separate from the processor regression. [Upstream ECEN 350 labs](https://github.com/pgratz1/ECEN350_Labs) · [Apache License 2.0](LICENSE)
+### Supporting coursework
+
+| Path | Contents |
+| --- | --- |
+| [`aarch64-instruction-basics/`](aarch64-instruction-basics/) | [C calling conventions](aarch64-instruction-basics/calling-convention/), [bit shifts](aarch64-instruction-basics/bit-shifts/), and [addressing and loads](aarch64-instruction-basics/addressing-and-loads/) |
+| [`aarch64-branches-and-loops/`](aarch64-branches-and-loops/) | Conditional branches, loops, and C harnesses |
+| [`aarch64-stack-and-recursion/`](aarch64-stack-and-recursion/) | Stack frames, recursive exponentiation, and an assembly multiply routine |
+| [`performance-benchmarking/`](performance-benchmarking/) | Build scaffold for an optimized C benchmark |
+| [`cache-trace/`](cache-trace/) | Compressed memory-access trace for cache analysis |
+| [`c-to-assembly/`](c-to-assembly/) | C example and Makefile for inspecting compiler-generated assembly |
+
+The coursework comes from Texas A&M's ECEN 350 Computer Organization labs. [Upstream ECEN 350 labs](https://github.com/pgratz1/ECEN350_Labs) · [Apache License 2.0](LICENSE)

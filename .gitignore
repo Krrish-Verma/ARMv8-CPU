@@ -5,5 +5,5 @@ __pycache__/
 *.out
 *.vcd
 *_output.txt
-/Lab06/signextendertest
-/Lab06/CECEN350_QEMUECEN350_LabsLab07
+/alu-immediates-and-next-pc/signextendertest
+/alu-immediates-and-next-pc/CECEN350_QEMUECEN350_LabsLab07

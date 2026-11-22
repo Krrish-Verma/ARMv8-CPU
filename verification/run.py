@@ -6,25 +6,25 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build"
-CONTROL = "Lab07/SingleCycleControl.v"
+CONTROL = "single-cycle-cpu/SingleCycleControl.v"
 PROCESSOR = [
-    "Lab07/SingleCycleProc.v",
+    "single-cycle-cpu/SingleCycleProc.v",
     CONTROL,
-    "Lab07/InstructionMemory.v",
-    "Lab07/DataMemory.v",
-    "Lab05/RegisterFile.v",
-    "Lab06/ALU.v",
-    "Lab06/SignExtender.v",
-    "Lab06/NextPClogic.v",
+    "single-cycle-cpu/InstructionMemory.v",
+    "single-cycle-cpu/DataMemory.v",
+    "register-file-and-logic/RegisterFile.v",
+    "alu-immediates-and-next-pc/ALU.v",
+    "alu-immediates-and-next-pc/SignExtender.v",
+    "alu-immediates-and-next-pc/NextPClogic.v",
 ]
 LEGACY_TESTS = [
-    ("ALUTest", "Lab06/ALUTest.v", ["Lab06/ALU.v"]),
-    ("SignExtenderTest", "Lab06/SignExtenderTest.v", ["Lab06/SignExtender.v"]),
-    ("SingleCycleControlTest", "Lab07/SingleCycleControlTest.v", [CONTROL]),
-    ("RegisterFileTest", "Lab05/RegisterFileTest.v", ["Lab05/RegisterFile.v"]),
-    ("mux2to1_8Test", "Lab05/mux2to1_8Test.v", ["Lab05/mux2to1_8.v"]),
-    ("NextPClogicTest", "Lab06/NextPClogicTest.v", ["Lab06/NextPClogic.v"]),
-    ("SingleCycleProcTest_v", "Lab07/SingleCycleProcTest.v", PROCESSOR),
+    ("ALUTest", "alu-immediates-and-next-pc/ALUTest.v", ["alu-immediates-and-next-pc/ALU.v"]),
+    ("SignExtenderTest", "alu-immediates-and-next-pc/SignExtenderTest.v", ["alu-immediates-and-next-pc/SignExtender.v"]),
+    ("SingleCycleControlTest", "single-cycle-cpu/SingleCycleControlTest.v", [CONTROL]),
+    ("RegisterFileTest", "register-file-and-logic/RegisterFileTest.v", ["register-file-and-logic/RegisterFile.v"]),
+    ("mux2to1_8Test", "register-file-and-logic/mux2to1_8Test.v", ["register-file-and-logic/mux2to1_8.v"]),
+    ("NextPClogicTest", "alu-immediates-and-next-pc/NextPClogicTest.v", ["alu-immediates-and-next-pc/NextPClogic.v"]),
+    ("SingleCycleProcTest_v", "single-cycle-cpu/SingleCycleProcTest.v", PROCESSOR),
 ]
 
 
