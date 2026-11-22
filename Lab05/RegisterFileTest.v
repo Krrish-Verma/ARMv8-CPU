@@ -82,7 +82,7 @@ module RegisterFileTest;
         if (errors == 0)
             $display("RegisterFile: ALL 34 TESTS PASSED");
         else
-            $display("RegisterFile: %0d TESTS FAILED", errors);
+            $fatal(1, "RegisterFile: %0d TESTS FAILED", errors);
         $finish;
     end
 endmodule

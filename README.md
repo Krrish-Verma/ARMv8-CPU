@@ -1,176 +1,105 @@
-# ARMv8 Single-Cycle CPU
+# ARMv8 CPU & RTL Verification Framework
 
-A computer architecture portfolio project that builds from ARMv8 assembly fundamentals to a working single-cycle processor in Verilog. The completed hardware integrates a 64-bit ALU, register file, immediate generator, control unit, instruction memory, data memory, and next-PC logic into one datapath.
+A 64-bit, single-cycle CPU in Verilog that executes 11 instruction forms from an educational ARMv8-A (A64) subset. The core combines a 32 × 64-bit register file, ALU, immediate logic, instruction ROM, and byte-addressable data RAM. A Python reference model checks the hardware cycle by cycle under cocotb and Verilator.
 
-> **Current status:** Labs 1-7 are complete. Labs 8-9 are retained as course material and work in progress; they are not presented as finished work.
+[![RTL regression](https://github.com/Krrish-Verma/ARMv8-CPU/actions/workflows/rtl.yml/badge.svg)](https://github.com/Krrish-Verma/ARMv8-CPU/actions/workflows/rtl.yml)
 
-## Highlights
+## Run the regression
 
-- Implemented a single-cycle CPU for a focused subset of the ARMv8 instruction set.
-- Designed and integrated reusable Verilog modules for the datapath and control path.
-- Enforced ARMv8 register semantics, including a hard-wired zero register (`X31`/`XZR`).
-- Built self-checking testbenches with directed and randomized test cases.
-- Used VCD waveforms and GTKWave scripts to inspect timing and datapath behavior.
-- Practiced ARMv8 assembly, calling conventions, stack discipline, branching, and memory access from C.
+Use Ubuntu 24.04 or Ubuntu under WSL. The commands below install the same toolchain used by GitHub Actions.
 
-## Processor Architecture
+```sh
+git clone https://github.com/Krrish-Verma/ARMv8-CPU.git
+cd ARMv8-CPU
+sudo apt-get update
+sudo apt-get install -y build-essential iverilog verilator python3-venv
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m verification.run
+```
+
+Run `python -m verification.run legacy` for the Icarus Verilog benches or `python -m verification.run cocotb --seed 0x350 --waves` for the Verilator tests with waveform tracing. The default seed is `0x350`. The runner saves the legacy demo trace to `build/icarus/singlecycle.vcd` and the optional Verilator CPU trace to `build/verilator/cpu/dump.vcd`. Each cocotb suite also writes a `results.xml` file in its build directory.
+
+```sh
+gtkwave build/icarus/singlecycle.vcd -S Lab07/SingleCycleProcTest.gtkw.tcl
+```
+
+## What the tests verify
+
+| Suite | Checks |
+| --- | --- |
+| Icarus Verilog components | **1,004** checks across the ALU (532), immediate extender (408), and main decoder (64), plus 34 register-file, 202 multiplexer, and 7 next-PC checks |
+| Icarus Verilog demo | Reaches the final load at PC `0x30` in 69 cycles, counts 15 loop iterations, and reloads `0xF` from data address `0x20` |
+| Verilator decoder | Exhaustively checks all **2,048** values of `instruction[31:21]`, including 58 matches across the 11 forms and 1,990 default cases |
+| Verilator processor | Runs a directed program plus **256 randomized instructions per seed**. The Python scoreboard checks the PC, write-back, stores, and final register and memory readbacks. Directed cases cover both branch directions, arithmetic wraparound, all four `MOVZ` shifts, reset, and invalid accesses. |
+
+The [GitHub Actions workflow](.github/workflows/rtl.yml) runs both suites on pushes to `main` and on pull requests. Failed test assertions fail the job.
+
+## Datapath
 
 ```mermaid
 flowchart LR
-    PC[Program Counter] --> IM[Instruction Memory]
-    IM --> CTRL[Control Unit]
-    IM --> RF[32 x 64-bit Register File]
-    IM --> SE[Sign Extender]
-    RF --> ALU[64-bit ALU]
-    SE --> ALU
-    CTRL --> RF
+    PC["Program counter"] --> ROM["Instruction ROM"]
+    ROM --> CTRL["Decoder"]
+    ROM --> RF["Register file"]
+    ROM --> IMM["Immediate logic"]
+    RF --> ALU["64-bit ALU"]
+    IMM --> ALU
     CTRL --> ALU
-    CTRL --> DM[Data Memory]
-    ALU --> DM
-    DM --> WB[Write-Back Mux]
-    ALU --> WB
+    RF --> RAM["Data RAM"]
+    ALU --> RAM
+    ALU --> WB["Write-back mux"]
+    RAM --> WB
     WB --> RF
-    ALU --> NPC[Next-PC Logic]
-    CTRL --> NPC
-    NPC --> PC
+    PC --> NEXT["Next PC"]
+    ALU -->|Zero flag| NEXT
+    IMM -->|Branch offset| NEXT
+    CTRL -->|Branch controls| NEXT
+    NEXT --> PC
 ```
 
-The processor currently supports:
+| Forms | Operand and result |
+| --- | --- |
+| `ADD`, `SUB` (register) | Two 64-bit registers with an unshifted second operand |
+| `AND`, `ORR` (register) | Bitwise operations with an unshifted second operand |
+| `ADD`, `SUB` (immediate) | 12-bit unsigned immediate with optional `LSL #12` |
+| `MOVZ` | 16-bit immediate placed at bit 0, 16, 32, or 48, with other bits cleared |
+| `LDUR`, `STUR` | 64-bit load or store at base plus a signed 9-bit byte offset |
+| `CBZ`, `B` | Conditional zero branch with a signed 19-bit offset, or unconditional branch with a signed 26-bit offset. Both offsets are in words and relative to the current PC. |
 
-| Category | Instructions |
-|---|---|
-| Memory | `LDUR`, `STUR` |
-| Arithmetic | `ADD`, `SUB` (register and immediate forms) |
-| Logic | `AND`, `ORR` |
-| Control flow | `CBZ`, `B` |
-| Immediate | `MOVZ` |
+The educational profile treats register encoding 31 as `XZR` in every operand position, including memory bases and immediate arithmetic. The core uses a 1,024-word instruction ROM and 1 KiB of big-endian data RAM. Eight-byte data accesses may be unaligned if the entire access fits. Out-of-bounds loads return zero and stores are discarded. An unsupported instruction or invalid fetch advances the PC by four with writes disabled. Synchronous reset loads `startpc` and suppresses writes while asserted. Programs initialize any general-purpose register they read.
 
-## Verification Results
+## Load a custom program
 
-The repository includes the testbenches, compiled Icarus Verilog simulations, VCD waveforms, and captured console output used during development.
+`SingleCycleProc` runs the built-in demo by default. To run your own image, instantiate it with `PROGRAM_FILE` set to a Verilog `$readmemh` file. Put one 32-bit hexadecimal instruction word per line, starting at byte address zero. Resolve relative paths from the simulation working directory. Custom images start with zero-filled data RAM.
 
-| Component | Coverage recorded in repository | Result |
-|---|---:|---|
-| 64-bit ALU | 532 directed/random checks | Pass, 0 errors |
-| Sign extender | 408 checks across I, D, CB, and B formats | Pass, 0 errors |
-| Single-cycle control | 64 opcode/control checks | Pass, 0 errors |
-| Integrated processor | Program result, loop count, and final PC | Pass, 3/3 checks |
-
-The integrated test program executes 69 cycles and verifies a final result of `0xF`, 15 loop iterations, and a final PC of `0x30`. See [`Lab07/SingleCycleProcTest_output.txt`](Lab07/SingleCycleProcTest_output.txt) for the captured run.
-
-## Repository Structure
-
-| Directory | Topic | Status |
-|---|---|---|
-| `Lab01` | C performance benchmarking and compiler optimization | Complete |
-| `Lab02` | ARMv8 calling convention, shifts, addressing, and loads | Complete |
-| `Lab03` | Conditional/unconditional branches and loops | Complete |
-| `Lab04` | Functions, callee-saved registers, and stack alignment | Complete |
-| `Lab05` | Gates, multiplexer, and 32 x 64-bit register file | Complete |
-| `Lab06` | ALU, sign extension, and next-PC logic | Complete |
-| `Lab07` | Control unit and integrated single-cycle processor | Complete |
-| `Lab08` | Cache performance analysis from an address trace | In progress |
-| `Lab09` | Comparing C with compiler-generated assembly | In progress |
-
-## Key Hardware Modules
-
-| Module | Location | Responsibility |
-|---|---|---|
-| `RegisterFile` | `Lab05/RegisterFile.v` | Two asynchronous read ports, one clocked write port, and `XZR` behavior |
-| `mux2to1_8` | `Lab05/mux2to1_8.v` | 8-bit two-input multiplexer |
-| `ALU` | `Lab06/ALU.v` | 64-bit AND, OR, ADD, SUB, and pass-through operations with zero detection |
-| `SignExtender` | `Lab06/SignExtender.v` | Immediate extraction and sign extension for I, D, CB, and B formats |
-| `NextPClogic` | `Lab06/NextPClogic.v` | Sequential PC updates and conditional/unconditional branch selection |
-| `SC_Control` | `Lab07/SingleCycleControl.v` | Opcode decoding and datapath control-signal generation |
-| `SingleCycleProc` | `Lab07/SingleCycleProc.v` | Top-level processor datapath integration |
-
-## Running the Verilog Simulations
-
-### Prerequisites
-
-- [Icarus Verilog](https://steveicarus.github.io/iverilog/) (`iverilog` and `vvp`)
-- [GTKWave](https://gtkwave.sourceforge.net/) (optional, for VCD waveform inspection)
-
-### ALU
-
-```sh
-cd Lab06
-iverilog -g2012 -o ALUTest.out ALUTest.v ALU.v
-vvp ALUTest.out | tee ALUTest_output.txt
+```verilog
+SingleCycleProc #(.PROGRAM_FILE("example.hex")) dut (
+    .CLK(clk), .reset(reset), .startpc(64'd0),
+    .currentpc(pc), .MemtoRegOut(writeback)
+);
 ```
 
-### Sign Extender
+`example.hex` stores 43 at data address zero, reloads it into `X3`, and stays at PC `0x10`. The last two lines set the final ROM word to zero using a word address.
 
-```sh
-cd Lab06
-iverilog -g2012 -o SignExtenderTest.out SignExtenderTest.v SignExtender.v
-vvp SignExtenderTest.out | tee SignExtenderTest_output.txt
+```text
+d2800541
+91000422
+f80003e2
+f84003e3
+14000000
+@3ff
+00000000
 ```
 
-### Control Unit
+## Source map
 
-```sh
-cd Lab07
-iverilog -g2012 -o SingleCycleControlTest.out \
-  SingleCycleControlTest.v SingleCycleControl.v
-vvp SingleCycleControlTest.out | tee SingleCycleControlTest_output.txt
-```
+| Path | Contents |
+| --- | --- |
+| [`Lab07/SingleCycleProc.v`](Lab07/SingleCycleProc.v) | CPU top level and datapath integration |
+| [`Lab07/`](Lab07/) | Opcode decoder, instruction ROM, data RAM, and demo bench |
+| [`Lab05/`](Lab05/) and [`Lab06/`](Lab06/) | Register file, ALU, immediate extension, next-PC logic, and component benches |
+| [`verification/`](verification/) | Simulation runner, test-program generator, Python reference model, and cocotb tests |
 
-### Integrated Processor
-
-Run this command from the repository root so the cross-lab module paths resolve correctly:
-
-```sh
-iverilog -g2012 -o Lab07/SingleCycleProcTest.out \
-  Lab07/SingleCycleProcTest.v \
-  Lab07/SingleCycleProc.v \
-  Lab07/SingleCycleControl.v \
-  Lab07/InstructionMemory.v \
-  Lab07/DataMemory.v \
-  Lab05/RegisterFile.v \
-  Lab05/mux2to1_8.v \
-  Lab06/ALU.v \
-  Lab06/SignExtender.v \
-  Lab06/NextPClogic.v
-
-vvp Lab07/SingleCycleProcTest.out | tee Lab07/SingleCycleProcTest_output.txt
-```
-
-To inspect a generated waveform:
-
-```sh
-gtkwave Lab07/singlecycle.vcd -S Lab07/SingleCycleProcTest.gtkw.tcl
-```
-
-## Running the C and ARMv8 Assembly Labs
-
-Labs 1-4 are intended for an ARMv8/AArch64 Linux environment with GCC and GNU Make. Each lab or lab part has its own `Makefile`:
-
-```sh
-cd Lab03
-make
-./Lab03
-make clean
-```
-
-The assembly exercises cover argument passing and return values, shifts, typed memory loads, branches and loops, and stack-based preservation of callee-saved registers.
-
-## Skills Demonstrated
-
-- Verilog RTL design and hierarchical module integration
-- CPU datapath and control-path design
-- ARMv8 instruction encoding and assembly programming
-- Digital logic verification with self-checking testbenches
-- Randomized and directed testing
-- Waveform-based debugging with VCD/GTKWave
-- C/assembly interoperability and GNU build tools
-
-## Notes and Attribution
-
-This repository contains educational work completed for ECEN 350 (Computer Organization). It includes course-provided starter/support files from the [original ECEN 350 lab repository](https://github.com/pgratz1/ECEN350_Labs) alongside the completed implementations and tests.
-
-Labs 8 and 9 remain unfinished by design and are included only to preserve the full course workspace.
-
-## License
-
-The included course repository is distributed under the [Apache License 2.0](LICENSE).
+The repository includes supporting coursework from Texas A&M's ECEN 350 Computer Organization labs. The assembly, cache, and compiler exercises are separate from the processor regression. [Upstream ECEN 350 labs](https://github.com/pgratz1/ECEN350_Labs) · [Apache License 2.0](LICENSE)

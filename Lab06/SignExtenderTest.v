@@ -50,8 +50,6 @@ module SignExtenderTest;
                 default: expected_out = 64'b0; 
                 
             endcase 
-            $display("test run %h", expected_out);
-
             Instruction = test_instr;
             SignOp      = test_signop;
             // Simulation-only delay that allows combinational signals to
@@ -112,20 +110,10 @@ module SignExtenderTest;
         $display("=== Sign Extender Test Summary ===");
         $display("Total tests: %0d", total_tests);
         $display("Errors:      %0d", error_count);
-        verify_test({28'h000002C}, TYPE_CB);
-        {{},test_instr[23:5], 2'b00}
-        
-
-
-
-
         if (error_count == 0)
             $display("ALL TESTS PASSED");
         else
-            $display("TEST FAILED");
-
-        
-
+            $fatal(1, "Sign extender test failed");
         $finish;
     end
 

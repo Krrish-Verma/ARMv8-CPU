@@ -39,7 +39,7 @@ module SingleCycleProcTest_v;
          if (passed == numTests)
             $display("ALL PROCESSOR TESTS PASSED: %0d of %0d", passed, numTests);
          else
-            $display("PROCESSOR TEST FAILED: %0d of %0d passed", passed, numTests);
+            $fatal(1, "PROCESSOR TEST FAILED: %0d of %0d passed", passed, numTests);
       end
    endtask
 
@@ -48,7 +48,6 @@ module SingleCycleProcTest_v;
    reg        Reset;
    reg [63:0] startPC;
    reg [7:0]  passed;
-   reg [15:0] watchdog;
 
    // Values used by the self-checking tests.
    integer program1Cycles;
@@ -72,7 +71,6 @@ module SingleCycleProcTest_v;
       Reset = 1'b1;
       startPC = 64'h0;
       passed = 0;
-      watchdog = 0;
       program1Cycles = 0;
       program1Iterations = 0;
 
@@ -82,7 +80,7 @@ module SingleCycleProcTest_v;
       $display("Starting original Program 1...");
 
       // Hold synchronous reset across two rising edges, then release it on a
-      // falling edge. This avoids racing the proc  essor's posedge PC update.   
+      // falling edge. This avoids racing the processor's posedge PC update.
       repeat (2) @(posedge CLK);
       @(negedge CLK);
       Reset = 1'b0;
@@ -115,18 +113,11 @@ module SingleCycleProcTest_v;
       CLK = 1'b0;
    end
 
-   always begin
-      #`HalfClockPeriod CLK = ~CLK;
-      #`HalfClockPeriod CLK = ~CLK;
-      watchdog = watchdog + 1;
-   end
-   // The original starter compared against 16'h00ff even though its comment
-   // said 64K cycles. 16'hffff is the correct 16-bit terminal count.
-   always @(*) begin
-      if (watchdog == 16'hffff) begin
-         $display("Watchdog Timer Expired.");
-         $finish;
-      end
+   always #`HalfClockPeriod CLK = ~CLK;
+
+   initial begin
+      #(`ClockPeriod * 256);
+      $fatal(1, "Processor did not reach the demo's final load");
    end
 
 endmodule

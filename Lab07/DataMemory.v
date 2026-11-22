@@ -1,82 +1,52 @@
 `timescale 1ns / 1ps
 
-`define SIZE 1024
+module DataMemory #(
+    parameter INIT_DEMO = 1
+)(
+    output reg [63:0] ReadData,
+    input      [63:0] Address,
+    input      [63:0] WriteData,
+    input             MemoryRead,
+    input             MemoryWrite,
+    input             Clock
+);
 
-module DataMemory(ReadData , Address , WriteData , MemoryRead , MemoryWrite , Clock);
-   input [63:0]      WriteData;
-   input [63:0]      Address;
-   input             Clock, MemoryRead, MemoryWrite;
-   output reg [63:0] ReadData;
+    localparam SIZE = 1024;
+    reg [7:0] memBank [0:SIZE-1];
+    wire [9:0] byteAddress = Address[9:0];
+    wire inBounds = Address <= 64'd1016;
+    integer index;
+    integer readByte;
+    integer writeByte;
 
-   reg [7:0] 	     memBank [`SIZE-1:0];
+    // The course demo expects these big-endian words. Custom programs
+    // start with zero-filled data memory.
+    initial begin
+        for (index = 0; index < SIZE; index = index + 1)
+            memBank[index] = 8'b0;
+        if (INIT_DEMO) begin
+            memBank[7] = 8'h01;
+            memBank[15] = 8'h0a;
+            memBank[23] = 8'h05;
+            {memBank[24], memBank[25], memBank[26], memBank[27],
+             memBank[28], memBank[29], memBank[30], memBank[31]} =
+                64'h0ffbea7deadbeeff;
+        end
+    end
 
+    // Unaligned 64-bit accesses are allowed when all eight bytes fit.
+    always @* begin
+        ReadData = 64'b0;
+        if (MemoryRead && inBounds) begin
+            for (readByte = 0; readByte < 8; readByte = readByte + 1)
+                ReadData[63 - 8*readByte -: 8] = memBank[byteAddress + readByte[9:0]];
+        end
+    end
 
-   // This task is used to write arbitrary data to the Data Memory by
-   // the intialization block.
-   task initset;
-      input [63:0] addr;
-      input [63:0] data;
-      begin
-	 memBank[addr] =  data[63:56] ; // Big-endian for the win...
-	 memBank[addr+1] =  data[55:48];
-	 memBank[addr+2] =  data[47:40];
-	 memBank[addr+3] =  data[39:32];
-	 memBank[addr+4] =  data[31:24];
-	 memBank[addr+5] =  data[23:16];
-	 memBank[addr+6] =  data[15:8];
-	 memBank[addr+7] =  data[7:0];
-      end
-   endtask
-
-
-   initial
-     begin
-        // preseting some data in the data memory used by test #1
-
-        // Address 0x0 gets 0x1
-        initset( 64'h0,  64'h1);  //Counter variable
-        initset( 64'h8,  64'ha);  //Part of mask
-        initset( 64'h10, 64'h5);  //Other part of mask
-        initset( 64'h18, 64'h0ffbea7deadbeeff); //big constant
-        initset( 64'h20, 64'h0); //clearing space
-
-        // Add any data you need for your tests here.
-
-     end
-
-   // This always block reads the data memory and places a double word
-   // on the ReadData bus.
-   always @*
-     begin
-        if(MemoryRead)
-          begin
-             ReadData[63:56] <=  memBank[Address];
-             ReadData[55:48] <=  memBank[Address+1];
-             ReadData[47:40] <=  memBank[Address+2];
-             ReadData[39:32] <=  memBank[Address+3];
-             ReadData[31:24] <=  memBank[Address+4];
-             ReadData[23:16] <=  memBank[Address+5];
-             ReadData[15:8] <=  memBank[Address+6];
-             ReadData[7:0] <=  memBank[Address+7];
-          end
-     end
-
-   // This always block takes data from the WriteData bus and writes
-   // it into the DataMemory.
-   always @(posedge Clock)
-     begin
-        if(MemoryWrite)
-          begin
-             memBank[Address] <= #3 WriteData[63:56] ;
-             memBank[Address+1] <= #3 WriteData[55:48];
-             memBank[Address+2] <= #3 WriteData[47:40];
-             memBank[Address+3] <= #3 WriteData[39:32];
-             memBank[Address+4] <= #3 WriteData[31:24];
-             memBank[Address+5] <= #3 WriteData[23:16];
-             memBank[Address+6] <= #3 WriteData[15:8];
-             memBank[Address+7] <= #3 WriteData[7:0];
-             // Could be useful for debugging:
-             // $display("Writing Address:%h Data:%h",Address, WriteData);
-          end
-     end
+    always @(posedge Clock) begin
+        if (MemoryWrite && inBounds) begin
+            for (writeByte = 0; writeByte < 8; writeByte = writeByte + 1)
+                memBank[byteAddress + writeByte[9:0]] <= WriteData[63 - 8*writeByte -: 8];
+        end
+    end
 endmodule

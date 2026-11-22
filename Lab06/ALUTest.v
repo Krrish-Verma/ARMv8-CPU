@@ -172,7 +172,7 @@ module ALUTest;
         if (error_count == 0)
             $display("ALL TESTS PASSED");
         else
-            $display("TEST FAILED");
+            $fatal(1, "ALU test failed");
 
         $finish;
     end

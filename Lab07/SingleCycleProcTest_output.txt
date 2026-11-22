@@ -1,9 +1,0 @@
-VCD info: dumpfile singlecycle.vcd opened for output.
-Starting original Program 1...
-PASS:                  Program 1 loaded result = 0x000000000000000f
-PASS:                Program 1 loop iterations = 0x000000000000000f
-PASS:                       Program 1 final PC = 0x0000000000000030
-Program 1 cycles executed: 69
-=== SingleCycleProc Test Summary ===
-ALL PROCESSOR TESTS PASSED: 3 of 3
-SingleCycleProcTest.v:110: $finish called at 8521000 (1ps)

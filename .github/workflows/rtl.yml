@@ -1,0 +1,27 @@
+name: RTL regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install simulators and Python dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential iverilog verilator python3-venv
+          python3 -m venv .venv
+          .venv/bin/python -m pip install -r requirements.txt
+      - name: Run Icarus Verilog and cocotb regressions
+        run: .venv/bin/python -m verification.run

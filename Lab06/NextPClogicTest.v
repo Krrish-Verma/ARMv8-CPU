@@ -52,7 +52,7 @@ module NextPClogicTest;
         if (errors == 0)
             $display("NextPClogic: ALL 7 TESTS PASSED");
         else
-            $display("NextPClogic: %0d TESTS FAILED", errors);
+            $fatal(1, "NextPClogic: %0d TESTS FAILED", errors);
         $finish;
     end
 endmodule

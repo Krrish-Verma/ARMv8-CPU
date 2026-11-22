@@ -63,7 +63,7 @@ module SingleCycleControlTest;
             casez (candidate)
                 11'b10001010000, 11'b10101010000,
                 11'b10001011000, 11'b11001011000,
-                11'b1001000100?, 11'b1101000100?,
+                11'b100100010??, 11'b110100010??,
                 11'b110100101??, 11'b000101?????,
                 11'b10110100???, 11'b11111000010,
                 11'b11111000000: is_supported = 1'b1;
@@ -131,7 +131,7 @@ module SingleCycleControlTest;
         if (errors == 0)
             $display("ALL TESTS PASSED");
         else
-            $display("TEST FAILED");
+            $fatal(1, "Control test failed");
         $finish;
     end
 endmodule

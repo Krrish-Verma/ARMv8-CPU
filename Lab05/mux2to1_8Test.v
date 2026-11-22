@@ -41,7 +41,7 @@ module mux2to1_8Test;
         if (errors == 0)
             $display("mux2to1_8: ALL 202 TESTS PASSED");
         else
-            $display("mux2to1_8: %0d TESTS FAILED", errors);
+            $fatal(1, "mux2to1_8: %0d TESTS FAILED", errors);
         $finish;
     end
 endmodule
